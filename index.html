@@ -376,15 +376,15 @@ function pad(dt){const g=GP.poll();
  const hx=(g.left||g.lx<-0.6)?1:(g.right||g.lx>0.6)?-1:0;if(hx&&!pad._h){const n=MODS[mod].hs.length;if(n)gotoHS(((hsSel<0?(hx>0?-1:0):hsSel)+hx+n)%n)}pad._h=hx}
 // ---------- loop ----------
 let last=performance.now(),fps=60,fpsA=[];
-function loop(now){const dt=Math.min(0.05,(now-last)/1000);last=now;fpsA.push(dt);if(fpsA.length>60)fpsA.shift();
- pad(dt);
+function loop(now){try{loopBody(now)}catch(e){showErr(e)}requestAnimationFrame(loop)}
+function loopBody(now){const dt=Math.min(0.05,(now-last)/1000);last=now;fpsA.push(dt);if(fpsA.length>60)fpsA.shift();
  if(mode=='view'){const kq=(keys.q?1:0)-(keys.e?1:0);if(kq)orbit(kq*-1.6*dt,0,0);const kw=(keys.w?1:0)-(keys.s&&false?1:0)}
  if(playing&&mode!='pause')simT+=dt*timeScale;
  MODS[mod].update(simT);
  for(const s of FX){s.userData.l-=dt*1.4;s.position.addScaledVector(s.userData.v,dt);s.userData.v.multiplyScalar(0.95);s.material.opacity=Math.max(0,s.userData.l)}for(let i=FX.length-1;i>=0;i--)if(FX[i].userData.l<=0){scene.remove(FX[i]);FX.splice(i,1)}
  plat.userData.r2.rotation.z+=dt*0.2;
  if(mode=='view'&&curStep&&curStep.act=='sw'&&MODS[1].st.running&&(now|0)%6==0){const e=$('cb').querySelector('.card .m');if(e){e.textContent=MODS[1].st.t.toFixed(2)+' s';const e2=$('cb').querySelectorAll('.card .m')[1];if(e2)e2.textContent='n = '+MODS[1].st.count}}
- camUpdate(dt);if(mode=='view'||mode=='pause')hsUpdate();R.render(scene,cam);requestAnimationFrame(loop)}
+ camUpdate(dt);if(mode=='view'||mode=='pause')hsUpdate();R.render(scene,cam)}
 // thumbnails
 function thumbs(){const w=R.domElement.width,h=R.domElement.height;MODS.forEach((m,i)=>{MODS.forEach((x,k)=>x.g.visible=k==i);m.update(0.4);setCam(m.cam,m.center);camS.t.copy(camD.t);camS.r=camD.r;camS.yaw=camD.yaw;camS.pitch=camD.pitch;camUpdate(0);R.render(scene,cam);const c=document.createElement('canvas');c.width=240;c.height=135;c.getContext('2d').drawImage(R.domElement,(w-h*16/9)/2,0,h*16/9,h,0,0,240,135);document.querySelectorAll('.tab img')[i].src=c.toDataURL('image/jpeg',0.8)});MODS.forEach((x,k)=>x.g.visible=k==0)}
 $('tabs').innerHTML=MODS.map((m,i)=>'<div class="tab" data-i="'+i+'"><img alt=""><span>'+m.icon+' '+m.name+'</span></div>').join('')+'<div class="tab chal" id="tChal"><span>🎯 التحدي النهائي</span></div>';
@@ -392,6 +392,12 @@ document.querySelectorAll('.tab[data-i]').forEach(t=>t.onclick=()=>{if(mode=='vi
 thumbs();MODS[0].g.visible=true;setCam(MODS[0].cam,MODS[0].center);prog();
 window.__lg={get mode(){return mode},get mod(){return mod},get step(){return step},get energy(){return energy},get unlocked(){return unlocked},get done(){return [...done]},get sw(){return {...MODS[1].st}},get hsSel(){return hsSel},get cam(){return {...camD,t:camD.t.toArray()}},get timeScale(){return timeScale},get playing(){return playing},get fps(){return 1/(fpsA.reduce((a,b)=>a+b,0)/fpsA.length)},get calls(){return R.info.render.calls},curStep:()=>curStep,setMod,A_,B_};
 requestAnimationFrame(loop);
+// gamepad polled on its own timer, independent of the render loop (same as the shooter's per-tick poll)
+function showErr(e){try{console.error(e);const d=document.getElementById('gpd');if(d){d.style.display='block';d.textContent='ERROR: '+(e&&e.message||e)+'\n'+(e&&e.stack||'').slice(0,400)}}catch(_){}}
+let lpT=performance.now();
+setInterval(()=>{const n=performance.now(),dt=Math.min(0.05,(n-lpT)/1000);lpT=n;try{pad(dt)}catch(e){showErr(e)}},16);
+addEventListener('gamepadconnected',e=>{try{GP.poll()}catch(_){}});
+addEventListener('error',e=>showErr(e.error||e.message));
 addEventListener('scroll',()=>{if(scrollX||scrollY)scrollTo(0,0)});document.addEventListener('scroll',()=>{document.documentElement.scrollLeft=0;document.body.scrollLeft=0},true);
 
 </script></body></html>
